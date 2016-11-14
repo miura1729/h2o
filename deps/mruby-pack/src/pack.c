@@ -701,7 +701,7 @@ prepare_tmpl(mrb_state *mrb, struct tmpl *tmpl)
 }
 
 static int
-has_tmpl(const struct tmpl *tmpl)
+has_tmpl(mrb_state *mrb, const struct tmpl *tmpl)
 {
   return (tmpl->idx < RSTRING_LEN(tmpl->str));
 }
@@ -934,7 +934,7 @@ mrb_pack_pack(mrb_state *mrb, mrb_value ary)
   result = mrb_str_new(mrb, NULL, 128);  /* allocate initial buffer */
   aidx = 0;
   ridx = 0;
-  while (has_tmpl(&tmpl)) {
+  while (has_tmpl(mrb, &tmpl)) {
     read_tmpl(mrb, &tmpl, &dir, &type, &size, &count, &flags);
 
     if (dir == PACK_DIR_INVALID)
@@ -1022,7 +1022,7 @@ mrb_pack_unpack(mrb_state *mrb, mrb_value str)
   srclen = RSTRING_LEN(str);
 
   result = mrb_ary_new(mrb);
-  while (has_tmpl(&tmpl)) {
+  while (has_tmpl(mrb, &tmpl)) {
     read_tmpl(mrb, &tmpl, &dir, &type, &size, &count, &flags);
 
     if (dir == PACK_DIR_INVALID)

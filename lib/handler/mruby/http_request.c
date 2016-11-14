@@ -82,6 +82,7 @@ static mrb_value detach_receiver(struct st_h2o_mruby_http_request_context_t *ctx
 static void on_dispose(void *_ctx)
 {
     struct st_h2o_mruby_http_request_context_t *ctx = _ctx;
+    mrb_state *mrb = ctx->generator->ctx->shared->mrb;
 
     /* clear the refs */
     if (ctx->client != NULL) {

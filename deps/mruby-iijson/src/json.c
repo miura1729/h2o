@@ -67,6 +67,7 @@ json_delimiter_p(char ch)
 static int
 json_getc(struct json_parser *parser)
 {
+  mrb_state *mrb = parser->mrb;
   if (parser->cursor < RSTRING_LEN(parser->src)) {
     unsigned char ch = RSTRING_PTR(parser->src)[parser->cursor];
     parser->cursor++;
@@ -79,6 +80,7 @@ json_getc(struct json_parser *parser)
 static int
 json_parse_readstring(struct json_parser *parser, const char *str)
 {
+  mrb_state *mrb = parser->mrb;
   size_t len;
   int ch;
 

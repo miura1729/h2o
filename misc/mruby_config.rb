@@ -26,4 +26,11 @@ MRuby::Build.new do |conf|
 
   # include all the core GEMs
   conf.gembox 'full-core'
+  conf.cc.flags << (ENV['CFLAGS'] || %w(-g -O3 -Wall -Werror-implicit-function-declaration -freg-struct-return -fomit-frame-pointer))
+  conf.linker.flags << (ENV['LDFLAGS'] || %w(-lm))
+  conf.linker.libraries << "stdc++"
+  conf.cxx.flags << (ENV['CFLAGS'] || %w(-g -O3 -Wall -Werror-implicit-function-declaration -freg-struct-return -fomit-frame-pointer -fno-operator-names))
+  conf.cxx.flags << %w(-fno-operator-names)
+  conf.cxx.include_paths << "#{root}/xbyak"
+
 end
