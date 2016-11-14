@@ -458,7 +458,7 @@ class MRBGenericCodeGenerator: public Xbyak::CodeGenerator {
     cmp(srcr, src);
   }
 
-  void emit_cmp(mrb_state *mrb, mrbjit_code_info *coi, Xbyak::Reg64 src0, Xbyak::Reg64 src) {
+  void emit_cmp(mrb_state *mrb, mrbjit_code_info *coi, Xbyak::Reg64 srcr, Xbyak::Reg64 src) {
     mov(r8, src);
     cmp(srcr, r8);
   }
