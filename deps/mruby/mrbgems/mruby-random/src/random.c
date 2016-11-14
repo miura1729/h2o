@@ -79,10 +79,10 @@ get_opt(mrb_state* mrb)
   mrb_get_args(mrb, "|o", &arg);
 
   if (!mrb_nil_p(arg)) {
-    if (!mrb_fixnum_p(arg)) {
+    arg = mrb_check_convert_type(mrb, arg, MRB_TT_FIXNUM, "Fixnum", "to_int");
+    if (mrb_nil_p(arg)) {
       mrb_raise(mrb, E_ARGUMENT_ERROR, "invalid argument type");
     }
-    arg = mrb_check_convert_type(mrb, arg, MRB_TT_FIXNUM, "Fixnum", "to_int");
     if (mrb_fixnum(arg) < 0) {
       arg = mrb_fixnum_value(0 - mrb_fixnum(arg));
     }
@@ -129,7 +129,7 @@ mrb_random_init(mrb_state *mrb, mrb_value self)
   if (t) {
     mrb_free(mrb, t);
   }
-  mrb_data_init(self, NULL, &mt_state_type);
+  mrb_data_init(mrb, self, NULL, &mt_state_type);
 
   t = (mt_state *)mrb_malloc(mrb, sizeof(mt_state));
   t->mti = N + 1;
@@ -145,7 +145,7 @@ mrb_random_init(mrb_state *mrb, mrb_value self)
     t->seed = mrb_fixnum(seed);
   }
 
-  mrb_data_init(self, t, &mt_state_type);
+  mrb_data_init(mrb, self, t, &mt_state_type);
 
   return self;
 }

@@ -99,7 +99,7 @@ MRuby::Gem::Specification.new('mruby-test') do |spec|
             f.puts %Q[    mrb_print_error(mrb2);]
             f.puts %Q[    exit(EXIT_FAILURE);]
             f.puts %Q[  }]
-            f.puts %Q[  mrb_const_set(mrb2, mrb_obj_value(mrb2->object_class), mrb_intern_lit(mrb2, "GEMNAME"), mrb_str_new(mrb2, "#{g.name}", #{g.name.length}));]
+            f.puts %Q[  mrb_const_set(mrb2, mrb_obj_value2(mrb2, mrb2->object_class), mrb_intern_lit(mrb2, "GEMNAME"), mrb_str_new(mrb2, "#{g.name}", #{g.name.length}));]
 
             unless g.test_args.empty?
               f.puts %Q[  test_args_hash = mrb_hash_new_capa(mrb, #{g.test_args.length}); ]
@@ -108,7 +108,7 @@ MRuby::Gem::Specification.new('mruby-test') do |spec|
                 escaped_arg_value = arg_value.gsub('\\', '\\\\\\\\').gsub('"', '\"')
                 f.puts %Q[  mrb_hash_set(mrb2, test_args_hash, mrb_str_new(mrb2, "#{escaped_arg_name.to_s}", #{escaped_arg_name.to_s.length}), mrb_str_new(mrb2, "#{escaped_arg_value.to_s}", #{escaped_arg_value.to_s.length})); ]
               end
-              f.puts %Q[  mrb_const_set(mrb2, mrb_obj_value(mrb2->object_class), mrb_intern_lit(mrb2, "TEST_ARGS"), test_args_hash); ]
+              f.puts %Q[  mrb_const_set(mrb2, mrb_obj_value2(mrb2, mrb2->object_class), mrb_intern_lit(mrb2, "TEST_ARGS"), test_args_hash); ]
             end
 
             f.puts %Q[  mrb_#{g.funcname}_gem_test(mrb2);] if g.custom_test_init?
@@ -146,6 +146,19 @@ MRuby::Gem::Specification.new('mruby-test') do |spec|
   end
 
   init = "#{spec.dir}/init_mrbtest.c"
+
+  # store the last gem selection and make the re-build
+  # of the test gem depending on a change to the gem
+  # selection
+  active_gems = "#{build_dir}/active_gems.lst"
+  FileUtils.mkdir_p File.dirname(active_gems)
+  open(active_gems, 'w+') do |f|
+    build.gems.each do |g|
+      f.puts g.name
+    end
+  end
+  file clib => active_gems
+
   file mlib => clib
   file clib => init do |t|
     _pp "GEN", "*.rb", "#{clib.relative_path}"

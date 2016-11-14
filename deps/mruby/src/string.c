@@ -19,6 +19,7 @@
 #include <mruby/range.h>
 #include <mruby/string.h>
 #include <mruby/re.h>
+#include <mruby/primitive.h>
 
 typedef struct mrb_shared_string {
   mrb_bool nofree : 1;
@@ -273,10 +274,16 @@ utf8_strlen(mrb_value str, mrb_int len)
   mrb_int total = 0;
   char* p = RSTRING_PTR(str);
   char* e = p;
+  if (RSTRING(str)->flags & MRB_STR_NO_UTF) {
+    return RSTRING_LEN(str);
+  }
   e += len < 0 ? RSTRING_LEN(str) : len;
   while (p<e) {
     p += utf8len(p, e);
     total++;
+  }
+  if (RSTRING_LEN(str) == total) {
+    RSTRING(str)->flags |= MRB_STR_NO_UTF;
   }
   return total;
 }
@@ -652,6 +659,7 @@ MRB_API void
 mrb_str_modify(mrb_state *mrb, struct RString *s)
 {
   check_frozen(mrb, s);
+  s->flags &= ~MRB_STR_NO_UTF;
   if (RSTR_SHARED_P(s)) {
     mrb_shared_string *shared = s->as.heap.aux.shared;
 
@@ -1863,7 +1871,6 @@ mrb_str_rindex(mrb_state *mrb, mrb_value str)
       sub = mrb_nil_value();
   }
   pos = chars2bytes(str, 0, pos);
-  len = chars2bytes(str, pos, len);
   mrb_regexp_check(mrb, sub);
 
   switch (mrb_type(sub)) {
@@ -2153,6 +2160,8 @@ mrb_str_len_to_inum(mrb_state *mrb, const char *str, size_t len, int base, int b
         break;
       }
     }
+    if (*(p - 1) == '0')
+      p--;
   }
   if (p == pend) {
     if (badcheck) goto bad;
@@ -2709,6 +2718,8 @@ mrb_init_string(mrb_state *mrb)
   mrb_define_method(mrb, s, "<=>",             mrb_str_cmp_m,           MRB_ARGS_REQ(1)); /* 15.2.10.5.1  */
   mrb_define_method(mrb, s, "==",              mrb_str_equal_m,         MRB_ARGS_REQ(1)); /* 15.2.10.5.2  */
   mrb_define_method(mrb, s, "+",               mrb_str_plus_m,          MRB_ARGS_REQ(1)); /* 15.2.10.5.4  */
+  mrbjit_define_primitive(mrb, s, "+", mrbjit_prim_str_plus);
+
   mrb_define_method(mrb, s, "*",               mrb_str_times,           MRB_ARGS_REQ(1)); /* 15.2.10.5.5  */
   mrb_define_method(mrb, s, "[]",              mrb_str_aref_m,          MRB_ARGS_ANY());  /* 15.2.10.5.6  */
   mrb_define_method(mrb, s, "capitalize",      mrb_str_capitalize,      MRB_ARGS_NONE()); /* 15.2.10.5.7  */

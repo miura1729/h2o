@@ -406,6 +406,10 @@ assert('String#insert') do
   assert_equal "abcdX", "abcd".insert(-1, 'X')
   assert_raise(IndexError) { "abcd".insert(5, 'X') }
   assert_raise(IndexError) { "abcd".insert(-6, 'X') }
+
+  a = "abcd"
+  a.insert(0, 'X')
+  assert_equal "Xabcd", a
 end
 
 assert('String#prepend') do
@@ -419,6 +423,13 @@ assert('String#ljust') do
   assert_equal "hello               ", "hello".ljust(20)
   assert_equal "hello123412341234123", "hello".ljust(20, '1234')
   assert_equal "hello", "hello".ljust(-3)
+end
+
+assert('String#rjust') do
+  assert_equal "hello", "hello".rjust(4)
+  assert_equal "               hello", "hello".rjust(20)
+  assert_equal "123412341234123hello", "hello".rjust(20, '1234')
+  assert_equal "hello", "hello".rjust(-3)
 end
 
 assert('String#upto') do
@@ -486,6 +497,10 @@ end
 assert('String#ord') do
   got = "hello!".split('').map {|x| x.ord}
   expect = [104, 101, 108, 108, 111, 33]
+  unless UTF8STRING
+    got << "\xff".ord
+    expect << 0xff
+  end
   assert_equal expect, got
 end
 

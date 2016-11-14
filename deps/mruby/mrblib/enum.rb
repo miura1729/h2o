@@ -192,13 +192,13 @@ module Enumerable
       result = args[0]
     end
     self.each{|*val|
-      val = val.__svalue
+      val2 = val.__svalue
       if flag
         # push first element as initial
         flag = false
-        result = val
+        result = val2
       else
-        result = block.call(result, val)
+        result = block.call(result, val2)
       end
     }
     result
@@ -383,7 +383,7 @@ module Enumerable
     h = 12347
     i = 0
     self.each do |e|
-      n = e.hash << (i % 16)
+      n = (e.hash & (0x7fffffff >> (i % 16))) << (i % 16)
       h ^= n
       i += 1
     end

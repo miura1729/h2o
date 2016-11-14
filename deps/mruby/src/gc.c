@@ -137,7 +137,7 @@ gettimeofday_time(void)
   fprintf(stderr, "%s\n", with);\
   fprintf(stderr, "gc_invoke: %19.3f\n", gettimeofday_time() - program_invoke_time);\
   fprintf(stderr, "is_generational: %d\n", is_generational(gc));\
-  fprintf(stderr, "is_major_gc: %d\n", is_major_gc(mrb));\
+  fprintf(stderr, "is_major_gc: %d\n", is_major_gc(gc));\
 } while(0)
 
 #define GC_TIME_START do {\
@@ -215,6 +215,7 @@ mrb_realloc(mrb_state *mrb, void *p, size_t len)
   p2 = mrb_realloc_simple(mrb, p, len);
   if (!p2 && len) {
     if (mrb->gc.out_of_memory) {
+      mrb_exc_raise(mrb, mrb_obj_value(mrb->nomem_err));
       /* mrb_panic(mrb); */
     }
     else {
@@ -452,7 +453,7 @@ mrb_gc_unregister(mrb_state *mrb, mrb_value obj)
   mrb_sym root = mrb_intern_lit(mrb, GC_ROOT_NAME);
   mrb_value table = mrb_gv_get(mrb, root);
   struct RArray *a;
-  mrb_int i, j;
+  mrb_int i, len;
 
   if (mrb_nil_p(table)) return;
   if (mrb_type(table) != MRB_TT_ARRAY) {
@@ -461,12 +462,14 @@ mrb_gc_unregister(mrb_state *mrb, mrb_value obj)
   }
   a = mrb_ary_ptr(table);
   mrb_ary_modify(mrb, a);
-  for (i=j=0; i<a->len; i++) {
-    if (!mrb_obj_eq(mrb, a->ptr[i], obj)) {
-      a->ptr[j++] = a->ptr[i];
+  len = a->len-1;
+  for (i=0; i<len; i++) {
+    if (mrb_obj_eq(mrb, a->ptr[i], obj)) {
+      memmove(&a->ptr[i], &a->ptr[i+1], len-i);
+      break;
     }
   }
-  a->len = j;
+  a->len--;
 }
 
 MRB_API struct RBasic*
@@ -607,6 +610,18 @@ gc_mark_children(mrb_state *mrb, mrb_gc *gc, struct RBasic *obj)
 
       mrb_gc_mark(mrb, (struct RBasic*)p->env);
       mrb_gc_mark(mrb, (struct RBasic*)p->target_class);
+      if (!MRB_PROC_CFUNC_P(p) && p->body.irep) {
+	int i;
+	mrb_irep *irep = p->body.irep;
+	for (i = 0; i < irep->plen; i++) {
+	  if (mrb_type(irep->pool[i]) == MRB_TT_STRING) {
+	    mrb_gc_mark(mrb, mrb_basic_ptr(irep->pool[i]));
+	  }
+	  if (mrb_type(irep->pool[i]) == MRB_TT_PROC) {
+	    mrb_gc_mark(mrb, mrb_basic_ptr(irep->pool[i]));
+	  }
+	}
+      }
     }
     break;
 
@@ -683,6 +698,7 @@ obj_free(mrb_state *mrb, struct RBasic *obj)
   case MRB_TT_TRUE:
   case MRB_TT_FIXNUM:
   case MRB_TT_SYMBOL:
+  case MRB_TT_CACHE_VALUE:
     /* cannot happen */
     return;
 
@@ -694,8 +710,13 @@ obj_free(mrb_state *mrb, struct RBasic *obj)
 #endif
 
   case MRB_TT_OBJECT:
+    mrb_gc_free_iv(mrb, (struct RObject*)obj);
+    break;
+
   case MRB_TT_EXCEPTION:
     mrb_gc_free_iv(mrb, (struct RObject*)obj);
+    if ((struct RObject*)obj == mrb->backtrace.exc)
+      mrb->backtrace.exc = 0;
     break;
 
   case MRB_TT_CLASS:
@@ -728,11 +749,15 @@ obj_free(mrb_state *mrb, struct RBasic *obj)
 
         while (ce <= ci) {
           struct REnv *e = ci->env;
-          if (e && !is_dead(&mrb->gc, e) && MRB_ENV_STACK_SHARED_P(e)) {
-            mrb_env_unshare(mrb, e);
+          if (e && e->tt == MRB_TT_ENV && !is_dead(&mrb->gc, e) && 
+	      MRB_ENV_STACK_SHARED_P(e) &&
+	      ci->proc->body.irep->shared_lambda != 1) {
+	    mrb_env_unshare(mrb, e);
           }
           ci--;
-        }
+	}
+        
+        mrb_free_context(mrb, c);
       }
     }
     break;

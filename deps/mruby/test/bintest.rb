@@ -4,7 +4,7 @@ require 'test/assert.rb'
 def cmd(s)
   case RbConfig::CONFIG['host_os']
   when /mswin(?!ce)|mingw|cygwin|bccwin/
-    "bin\\#{s}.exe"
+    "bin/#{s}.exe"
   else
     "bin/#{s}"
   end
@@ -20,6 +20,11 @@ def shellquote(s)
 end
 
 ARGV.each do |gem|
+  case RbConfig::CONFIG['host_os']
+  when /mswin(?!ce)|mingw|cygwin|bccwin/
+    gem = gem.gsub('\\', '/')
+  end
+
   Dir["#{gem}/bintest/**/*.rb"].each do |file|
     load file
   end

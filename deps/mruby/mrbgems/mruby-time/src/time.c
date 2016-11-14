@@ -213,19 +213,21 @@ static struct mrb_time*
 time_alloc(mrb_state *mrb, double sec, double usec, enum mrb_timezone timezone)
 {
   struct mrb_time *tm;
+  time_t tsec;
 
-  tm = (struct mrb_time *)mrb_malloc(mrb, sizeof(struct mrb_time));
   if (sizeof(time_t) == 4 && (sec > (double)INT32_MAX || (double)INT32_MIN > sec)) {
     goto out_of_range;
   }
   if (sizeof(time_t) == 8 && (sec > (double)INT64_MAX || (double)INT64_MIN > sec)) {
     goto out_of_range;
   }
-  tm->sec  = (time_t)sec;
-  if ((sec > 0 && tm->sec < 0) || (sec < 0 && (double)tm->sec > sec)) {
+  tsec  = (time_t)sec;
+  if ((sec > 0 && tsec < 0) || (sec < 0 && (double)tsec > sec)) {
   out_of_range:
     mrb_raisef(mrb, E_ARGUMENT_ERROR, "%S out of Time range", mrb_float_value(mrb, sec));
   }
+  tm = (struct mrb_time *)mrb_malloc(mrb, sizeof(struct mrb_time));
+  tm->sec  = tsec;
   tm->usec = (time_t)llround((sec - tm->sec) * 1.0e6 + usec);
   while (tm->usec < 0) {
     tm->sec--;
@@ -589,7 +591,7 @@ mrb_time_initialize(mrb_state *mrb, mrb_value self)
   if (tm) {
     mrb_free(mrb, tm);
   }
-  mrb_data_init(self, NULL, &mrb_time_type);
+  mrb_data_init(mrb, self, NULL, &mrb_time_type);
 
   n = mrb_get_args(mrb, "|iiiiiii",
        &ayear, &amonth, &aday, &ahour, &amin, &asec, &ausec);
@@ -599,7 +601,7 @@ mrb_time_initialize(mrb_state *mrb, mrb_value self)
   else {
     tm = time_mktime(mrb, ayear, amonth, aday, ahour, amin, asec, ausec, MRB_TIMEZONE_LOCAL);
   }
-  mrb_data_init(self, tm, &mrb_time_type);
+  mrb_data_init(mrb, self, tm, &mrb_time_type);
   return self;
 }
 
@@ -616,7 +618,7 @@ mrb_time_initialize_copy(mrb_state *mrb, mrb_value copy)
     mrb_raise(mrb, E_TYPE_ERROR, "wrong argument class");
   }
   if (!DATA_PTR(copy)) {
-    mrb_data_init(copy, mrb_malloc(mrb, sizeof(struct mrb_time)), &mrb_time_type);
+    mrb_data_init(mrb, copy, mrb_malloc(mrb, sizeof(struct mrb_time)), &mrb_time_type);
   }
   *(struct mrb_time *)DATA_PTR(copy) = *(struct mrb_time *)DATA_PTR(src);
   return copy;

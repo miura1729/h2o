@@ -125,7 +125,9 @@ read_irep_record_1(mrb_state *mrb, const uint8_t *bin, size_t *len, uint8_t flag
         s = mrb_str_new_static(mrb, (char *)src, pool_data_len);
       }
       src += pool_data_len;
+
       switch (tt) { /* pool data */
+      case MRB_TT_CACHE_VALUE:
       case IREP_TT_FIXNUM:
         irep->pool[i] = mrb_str_to_inum(mrb, s, 10, FALSE);
         break;
@@ -136,6 +138,10 @@ read_irep_record_1(mrb_state *mrb, const uint8_t *bin, size_t *len, uint8_t flag
 
       case IREP_TT_STRING:
         irep->pool[i] = mrb_str_pool(mrb, s);
+        break;
+
+      case IREP_TT_FALSE:
+        irep->pool[i] = mrb_str_to_inum(mrb, s, 10, FALSE);
         break;
 
       default:
@@ -183,6 +189,22 @@ read_irep_record_1(mrb_state *mrb, const uint8_t *bin, size_t *len, uint8_t flag
   diff = src - bin;
   mrb_assert_int_fit(ptrdiff_t, diff, size_t, SIZE_MAX);
   *len = (size_t)diff;
+
+  // JIT Block
+  irep->jit_entry_tab = (mrbjit_codetab *)mrb_calloc(mrb, irep->ilen, sizeof(mrbjit_codetab));
+  for (i = 0; i < irep->ilen; i++) {
+    irep->jit_entry_tab[i].size = 2;
+    irep->jit_entry_tab[i].body = 
+      (mrbjit_code_info *)mrb_calloc(mrb, 2, sizeof(mrbjit_code_info));
+  }
+  irep->prof_info = (int *)mrb_calloc(mrb, 1, sizeof(int)*irep->ilen);
+  irep->method_kind = NORMAL;
+  irep->jit_inlinep = mrbjit_check_inlineble(mrb, irep);
+
+  irep->simple_lambda = 0;
+  irep->shared_lambda = 0;
+  irep->arg_ver_num = 0;
+  irep->proc_obj = NULL;
 
   return irep;
 }
@@ -635,7 +657,7 @@ mrb_load_irep_cxt(mrb_state *mrb, const uint8_t *bin, mrbc_context *c)
   proc = mrb_proc_new(mrb, irep);
   mrb_irep_decref(mrb, irep);
   if (c && c->no_exec) return mrb_obj_value(proc);
-  return mrb_toplevel_run(mrb, proc);
+  return mrb_top_run(mrb, proc, mrb_top_self(mrb), 0);
 }
 
 MRB_API mrb_value
@@ -697,7 +719,7 @@ mrb_load_irep_file_cxt(mrb_state *mrb, FILE* fp, mrbc_context *c)
   mrb_irep_decref(mrb, irep);
   if (c && c->dump_result) mrb_codedump_all(mrb, proc);
   if (c && c->no_exec) return mrb_obj_value(proc);
-  val = mrb_toplevel_run(mrb, proc);
+  val = mrb_top_run(mrb, proc, mrb_top_self(mrb), 0);
   return val;
 }
 

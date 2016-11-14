@@ -335,6 +335,7 @@ assert('Kernel#loop', '15.3.1.3.29') do
   assert_equal i, 100
 end
 
+$once = true
 assert('Kernel#method_missing', '15.3.1.3.30') do
   class MMTestClass
     def method_missing(sym)
@@ -375,8 +376,11 @@ assert('Kernel#method_missing', '15.3.1.3.30') do
     assert_equal "undefined method 'no_method_named_this' for #{c.to_s}", e.message
   end
 
-  class NoInspectClass
-    undef inspect
+  if $once then
+    $once = false
+    class NoInspectClass
+      undef inspect
+    end
   end
   d = NoInspectClass.new
   begin
@@ -423,6 +427,11 @@ end
 
 assert('Kernel#public_methods', '15.3.1.3.38') do
   assert_equal Array, public_methods.class
+  class Foo
+    def foo
+    end
+  end
+  assert_equal [:foo], Foo.new.public_methods(false)
 end
 
 # Kernel#puts is defined in mruby-print mrbgem. '15.3.1.3.39'

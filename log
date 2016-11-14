@@ -1,0 +1,12 @@
+git add deps/mruby/include/mruby/jit.h
+git add deps/mruby/include/mruby/jit_x64.h
+git add deps/mruby/include/mruby/jit_x86.h
+git add deps/mruby/include/mruby/jitcode.h
+git add deps/mruby/include/mruby/primitive.h
+git add deps/mruby/mrbgems/mruby-eval/src/opcode.h
+git add deps/mruby/src/invoke.c
+git add deps/mruby/src/jit.c
+git add deps/mruby/src/jit_x86.h
+git add deps/mruby/src/jitcode.cc
+git add deps/mruby/src/jitcode.h
+git add deps/mruby/src/primitive.cc
